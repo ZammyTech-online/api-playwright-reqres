@@ -1,0 +1,18 @@
+{
+  "name": "api-playwright-reqres",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prueba técnica API QA Automation - ReqRes (Playwright + TypeScript)",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "test:html": "playwright test --reporter=html"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.0",
+    "@types/node": "^25.2.1",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.4"
+  }
+}
