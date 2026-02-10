@@ -1,91 +1,143 @@
-﻿# Prueba técnica - API Testing (ReqRes) con Playwright + TypeScript
+﻿# Technical Assignment — API Testing (ReqRes) with Playwright + TypeScript
 
-Suite de pruebas automatizadas para ReqRes usando Playwright Test y TypeScript. Enfocada en clean code, reutilización y validaciones estables (anti-flaky) sobre una API pública.
+API automation suite for ReqRes using Playwright Test + TypeScript. Focused on clean code, maintainability, stable assertions (anti-flaky), and environment-based configuration (no hardcoded secrets).
 
-## Requisitos
+## Requirements
 
-- Node.js 18+ (recomendado 20+)
+- Node.js 18+ (20+ recommended)
 - npm
+
+## Project Structure
+
+- `src/config/` — environment loading + validation (BASE_URL, X_API_KEY)
+- `src/fixtures/` — Playwright fixtures (APIRequestContext with baseURL + headers)
+- `src/clients/` — API clients (AuthClient, UsersClient) to centralize request logic
+- `src/types/` — TypeScript types for ReqRes contracts
+- `src/utils/` — utilities (timing/measurement used for observability only)
+- `tests/` — spec files aligned with the assignment scenarios
+
+## Design Notes (Clean Code & Maintainability)
+
+- Configuration is environment-driven: `BASE_URL` and `X_API_KEY` are read from `.env` locally or CI secrets. No secrets are hardcoded or committed (`.env` is git-ignored; `.env.example` contains placeholders only).
+- A single API fixture (`src/fixtures/api.ts`) centralizes `baseURL` and common headers (including `x-api-key`) so tests stay consistent and avoid duplication.
+- Request logic is encapsulated in small API clients (`src/clients/*`) to keep specs readable and to isolate endpoint changes from tests.
+- Assertions focus on stable contracts and required fields; the `delay` scenario avoids strict time-based checks to prevent flakiness on a public API (CDN/cache variability).
+- A CI-safe mode (`npm run test:ci`) is provided to reduce parallelism and mitigate public API rate limits; `npm run verify` runs typecheck + CI-safe tests for reproducible validation.
+- Playwright HTML reporting is generated for submission (`playwright-report/`) as required by the assignment.
 
 ## Setup
 
-1) Instalar dependencias:
+1) Install dependencies:
 
-- npm install
-- npx playwright install
+- `npm install`
+- `npx playwright install`
 
-2) Variables de entorno (sin hardcodear secretos)
+2) Environment variables (no hardcoded secrets)
 
-El PDF indica que **x-api-key es obligatorio** para que las requests funcionen.:contentReference[oaicite:3]{index=3}
+**Important (per assignment):** the `x-api-key` header is required for requests to work.  
+This project injects it automatically via the API fixture (`src/fixtures/api.ts`) using `X_API_KEY` from environment variables.
 
-- Copia `.env.example` a `.env`
-- En `.env` define:
-  - BASE_URL=https://reqres.in
-  - X_API_KEY=<TU_API_KEY>
+- Copy `.env.example` to `.env`
+- Set in `.env`:
+  - `BASE_URL=https://reqres.in`
+  - `X_API_KEY=<YOUR_API_KEY>`
 
-Notas importantes:
-- `.env` NO se sube al repo (está en `.gitignore`).
-- `.env.example` debe tener SOLO placeholders (nunca una key real).
+Notes:
+- `.env` is ignored by git and must not be committed.
+- `.env.example` contains placeholders only (never real keys).
+- If you do not have an API key, generate one on ReqRes (as described in the assignment).
 
-## Ejecutar
+## Running
 
-- Suite completa:
-  - npm test
+- Run full suite:
+  - `npm test`
 
-- Typecheck:
-  - npm run typecheck
+- Typecheck only:
+  - `npm run typecheck`
 
-- Modo CI-safe (menos paralelismo):
-  - npm run test:ci
+- CI-safe run (lower parallelism to avoid public API limitations):
+  - `npm run test:ci`
 
-## Reporte HTML (obligatorio para la entrega)
+- Verify (typecheck + CI-safe tests):
+  - `npm run verify`
 
-El PDF exige generar reporte HTML y adjuntarlo al ZIP.:contentReference[oaicite:4]{index=4}
+- Clean artifacts:
+  - `npm run clean`
 
-- Generar:
-  - npm run test:html
+## HTML Report (required)
 
-- Abrir:
-  - npm run report
+- Generate report:
+  - `npm run test:html`
 
-El reporte queda en:
-- playwright-report/
+- Open report locally:
+  - `npm run report`
 
-Entrega (ZIP):
-- código fuente + playwright-report/
-- sin node_modules
-- sin .env
+Report output folder:
+- `playwright-report/`
 
-## Alcance vs Assignment
+## Reproducibility (local)
 
-1) POST /api/login
-- Login OK: 200 + token
-- Login KO: credenciales inválidas (email+password presentes) -> 4xx + error
-- Login KO: missing fields -> 4xx + error
+The project was validated from a clean install using:
 
-2) GET /api/users/2
-- 200 + estructura (data, support) + contenido esperado
+- `npm ci`
+- `npm run verify` (typecheck + CI-safe tests with 2 workers)
+- `npm run test:html` (HTML report generation)
 
-3) POST /api/users (create)
-- Caso válido: 201 + id + createdAt + eco name/job
-- Inputs inválidos:
-  - No permitir 5xx
-  - Rama 201 o 4xx sin inventar comportamiento del proveedor
+This is intentionally designed to be stable against public API limitations (rate limits / variability).
 
-4) Paginación /api/users?page=2
-- “correct number of users”
-- page/per_page/total/total_pages accurate
-- page1 vs page2: usuarios únicos
+## Submission
 
-5) Delay
-- Anti-flaky: validar URL contiene delay + 200 + schema
+Submission ZIP must include:
+- source code + `playwright-report/`
+- exclude `node_modules/`
+- exclude `.env`
 
-6) Bonus 1 (chained)
-- list -> pick user -> detail consistency
+## Coverage vs Assignment
 
-## Bonus 2 (teoría: token auth)
+1) POST `/api/login`
+- Success: valid credentials -> `200` + `token`
+- Failure: invalid credentials with both email+password present -> `4xx` + error
+- Missing fields: email missing, password missing, both missing -> `4xx` + error
+- Extra checks: status codes + basic response contract (token or error)
 
-Si el token de /api/login fuese requerido para autenticar el resto de endpoints:
+2) GET `/api/users/2`
+- `200` + required structure (`data`, `support`)
+- Content checks (id/email/names/avatar)
+
+3) POST `/api/users` (create user)
+- Valid case -> `201` + `id` + `createdAt` + echo `name/job`
+- Invalid inputs (provider-dependent behavior):
+  - never allow `5xx`
+  - branch validation: if `201` validate `id/createdAt`; if `4xx` validate `error/message`
+
+4) Pagination GET `/api/users?page=2`
+- "Correct number of users" (per_page logic)
+- `page`, `per_page`, `total`, `total_pages` accuracy checks
+- Page 1 vs Page 2: no overlapping user ids
+
+5) Delay GET `/api/users?delay=<n>`
+- Anti-flaky validations: request contains `delay`, status `200`, stable schema checks
+- No strict time assertions (public APIs may vary due to cache/CDN/routing)
+
+6) Bonus 1 (chained requests)
+- list -> pick user -> detail
+- consistency validation between list item and user detail
+
+## Bonus 2 — Token-based auth (design proposal)
+
+If the `/api/login` token were required for other endpoints:
+
 - Store & reuse tokens securely
+  - credentials in `.env` locally or CI secrets (never hardcoded)
+  - obtain token once per worker/suite and cache in memory
+  - never persist tokens in the repo
+
 - Add auth headers automatically
-- Handle token expiration / reuse
+  - create an `authApi` fixture that logs in during setup and injects:
+    `Authorization: Bearer <token>`
+  - alternative: a BaseClient that attaches common headers to all requests
+
+- Handle token expiration
+  - on `401/403`, refresh token and retry once (avoid loops)
+  - if refresh tokens exist: TokenProvider with TTL and proactive refresh
+  - do not reuse tokens across CI pipeline runs
