@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:ci": "playwright test --workers=2",
     "verify": "npm run typecheck && npm run test:ci",
-    "clean": "playwright test --list > ; if(Test-Path playwright-report){Remove-Item -Recurse -Force playwright-report}; if(Test-Path test-results){Remove-Item -Recurse -Force test-results}"
+    "clean": "node ./scripts/clean.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
