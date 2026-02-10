@@ -1,32 +1,52 @@
-export type LoginResponse = { token: string };
-export type ErrorResponse = { error: string };
+﻿export interface Support {
+  url: string;
+  text: string;
+}
 
-export type User = {
+export interface ReqResUser {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
   avatar: string;
-};
+}
 
-export type Support = { url: string; text: string };
+export interface SingleUserResponse {
+  data: ReqResUser;
+  support: Support;
+}
 
-export type SingleUserResponse = { data: User; support: Support };
-
-export type ListUsersResponse = {
+export interface ListUsersResponse {
   page: number;
   per_page: number;
   total: number;
   total_pages: number;
-  data: User[];
+  data: ReqResUser[];
   support: Support;
-};
+}
 
-export type CreateUserRequest = { name: string; job: string };
+export interface LoginRequest {
+  email?: string;
+  password?: string;
+}
 
-export type CreateUserResponse = {
+export interface LoginResponse {
+  token: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface CreateUserRequest {
+  name?: string;
+  job?: string;
+  [k: string]: unknown;
+}
+
+export interface CreateUserResponse {
   name: string;
   job: string;
   id: string;
   createdAt: string;
-};
+}

@@ -7,12 +7,34 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
-    "test:html": "playwright test --reporter=html"
+    "test:html": "playwright test --reporter=html",
+    "healthcheck:reqres": "node -e \"require('dotenv').config(); const https=require('https'); const key=process.env.X_API_KEY; if(!key) throw new Error('X_API_KEY missing'); const req=https.request('https://reqres.in/api/users/2',{headers:{'x-api-key':key,'accept':'application/json'}},res=>{console.log('HTTP',res.statusCode); process.exit(res.statusCode===200?0:1)}); req.on('error',e=>{console.error(e); process.exit(1)}); req.end();\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "^1.46.0",
-    "@types/node": "^25.2.1",
-    "dotenv": "^16.4.5",
-    "typescript": "^5.5.4"
-  }
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.2.3",
+    "dotenv": "^16.6.1",
+    "typescript": "^5.9.3"
+  },
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "playwright": "^1.58.1",
+    "playwright-core": "^1.58.1",
+    "undici-types": "^7.16.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StoneFly365/api-playwright-reqres.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StoneFly365/api-playwright-reqres/issues"
+  },
+  "homepage": "https://github.com/StoneFly365/api-playwright-reqres#readme"
 }

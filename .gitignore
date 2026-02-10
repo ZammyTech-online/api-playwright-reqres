@@ -1,4 +1,5 @@
-node_modules/
-playwright-report/
+﻿node_modules/
 test-results/
+playwright-report/
 .env
+.DS_Store

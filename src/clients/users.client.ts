@@ -1,65 +1,75 @@
-import { APIRequestContext, expect } from '@playwright/test';
-import type { SingleUserResponse, ListUsersResponse, CreateUserRequest, CreateUserResponse } from '../types/reqres';
+﻿import { APIRequestContext, APIResponse, expect } from "@playwright/test";
+import type {
+  CreateUserRequest,
+  CreateUserResponse,
+  ListUsersResponse,
+  SingleUserResponse
+} from "../types/reqres";
+import { isIsoDate } from "../utils/timing";
 
 export class UsersClient {
   constructor(private readonly api: APIRequestContext) {}
 
-  async getUser(id: number) {
-    const res = await this.api.get(`/api/users/${id}`);
-    return res;
+  async getUserRaw(id: number): Promise<APIResponse> {
+    return this.api.get(`/api/users/${id}`);
   }
 
-  async getUserOk(id: number): Promise<SingleUserResponse> {
-    const res = await this.getUser(id);
-    expect(res.status()).toBe(200);
+  async getUser(id: number): Promise<SingleUserResponse> {
+    const res = await this.getUserRaw(id);
+    expect(res.status(), "GET /api/users/:id debe devolver 200").toBe(200);
+
     const body = (await res.json()) as SingleUserResponse;
-
-    expect(body.data).toBeTruthy();
-    expect(body.data.id).toBe(id);
-    expect(body.data.email).toMatch(/@/);
-    expect(body.data.first_name).toBeTruthy();
-    expect(body.data.last_name).toBeTruthy();
-    expect(body.support?.url).toBeTruthy();
-    expect(body.support?.text).toBeTruthy();
+    expect(body.data, "Debe existir data").toBeTruthy();
+    expect(body.data.id, "Debe devolver id").toBe(id);
+    expect(body.data.email, "Debe devolver email").toBeTruthy();
+    expect(body.data.first_name, "Debe devolver first_name").toBeTruthy();
+    expect(body.data.last_name, "Debe devolver last_name").toBeTruthy();
+    expect(body.data.avatar, "Debe devolver avatar").toBeTruthy();
+    expect(body.support?.url, "Debe devolver support.url").toBeTruthy();
+    expect(body.support?.text, "Debe devolver support.text").toBeTruthy();
 
     return body;
   }
 
-  async listUsers(page: number, delaySeconds?: number) {
-    const params = new URLSearchParams({ page: String(page) });
-    if (delaySeconds !== undefined) params.set('delay', String(delaySeconds));
-    const res = await this.api.get(`/api/users?${params.toString()}`);
-    return res;
+  async listUsersRaw(params?: { page?: number; delay?: number }): Promise<APIResponse> {
+    const query = new URLSearchParams();
+    if (params?.page !== undefined) query.set("page", String(params.page));
+    if (params?.delay !== undefined) query.set("delay", String(params.delay));
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return this.api.get(`/api/users${suffix}`);
   }
 
-  async listUsersOk(page: number, delaySeconds?: number): Promise<ListUsersResponse> {
-    const res = await this.listUsers(page, delaySeconds);
-    expect(res.status()).toBe(200);
+  async listUsers(params?: { page?: number; delay?: number }): Promise<{ body: ListUsersResponse; res: APIResponse }> {
+    const res = await this.listUsersRaw(params);
+    expect(res.status(), "GET /api/users debe devolver 200").toBe(200);
+
     const body = (await res.json()) as ListUsersResponse;
+    expect(Array.isArray(body.data), "data debe ser array").toBeTruthy();
+    expect(body.support?.url, "support.url debe existir").toBeTruthy();
+    expect(body.support?.text, "support.text debe existir").toBeTruthy();
 
-    expect(body.page).toBe(page);
-    expect(body.per_page).toBeGreaterThan(0);
-    expect(body.total).toBeGreaterThan(0);
-    expect(body.total_pages).toBeGreaterThan(0);
-    expect(Array.isArray(body.data)).toBe(true);
+    if (params?.page !== undefined) {
+      expect(body.page, "page debe coincidir").toBe(params.page);
+    }
 
-    return body;
+    return { body, res };
   }
 
-  async createUser(payload: CreateUserRequest) {
-    const res = await this.api.post('/api/users', { data: payload });
-    return res;
+  async createUserRaw(data: CreateUserRequest): Promise<APIResponse> {
+    return this.api.post("/api/users", { data });
   }
 
-  async createUserOk(payload: CreateUserRequest): Promise<CreateUserResponse> {
-    const res = await this.createUser(payload);
-    expect(res.status()).toBe(201);
+  async createUserOk(name: string, job: string): Promise<CreateUserResponse> {
+    const res = await this.createUserRaw({ name, job });
+    expect(res.status(), "POST /api/users válido debe devolver 201").toBe(201);
+
     const body = (await res.json()) as CreateUserResponse;
-
-    expect(body.name).toBe(payload.name);
-    expect(body.job).toBe(payload.job);
-    expect(body.id).toBeTruthy();
-    expect(body.createdAt).toBeTruthy();
+    expect(body.id, "Debe devolver id").toBeTruthy();
+    expect(body.createdAt, "Debe devolver createdAt").toBeTruthy();
+    expect(isIsoDate(body.createdAt), "createdAt debe ser ISO date parseable").toBeTruthy();
+    expect(body.name, "Debe eco de name").toBe(name);
+    expect(body.job, "Debe eco de job").toBe(job);
 
     return body;
   }
