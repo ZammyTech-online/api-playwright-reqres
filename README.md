@@ -1,4 +1,4 @@
-﻿# Technical Assignment — API Testing (ReqRes) with Playwright + TypeScript
+# Technical Assignment — API Testing (ReqRes) with Playwright + TypeScript
 
 API automation suite for ReqRes using Playwright Test + TypeScript. Focused on clean code, maintainability, stable assertions (anti-flaky), and environment-based configuration (no hardcoded secrets).
 
@@ -84,6 +84,16 @@ The project was validated from a clean install using:
 - `npm run test:html` (HTML report generation)
 
 This is intentionally designed to be stable against public API limitations (rate limits / variability).
+
+## CI (GitHub Actions)
+
+This repository includes a CI workflow that runs `npm run verify` and uploads the Playwright HTML report as an artifact.
+
+Required secret:
+- `X_API_KEY` (Repository Settings → Secrets and variables → Actions → New repository secret)
+
+Where to download the report:
+- GitHub → Actions → select a workflow run → Artifacts → `playwright-report`
 
 ## Submission
 
