@@ -1,4 +1,4 @@
-# Technical Assignment — API Testing (ReqRes) with Playwright + TypeScript
+# Technical Assignment €” API Testing (ReqRes) with Playwright + TypeScript
 
 API automation suite for ReqRes using Playwright Test + TypeScript. Focused on clean code, maintainability, stable assertions (anti-flaky), and environment-based configuration (no hardcoded secrets).
 
@@ -9,12 +9,12 @@ API automation suite for ReqRes using Playwright Test + TypeScript. Focused on c
 
 ## Project Structure
 
-- `src/config/` — environment loading + validation (BASE_URL, X_API_KEY)
-- `src/fixtures/` — Playwright fixtures (APIRequestContext with baseURL + headers)
-- `src/clients/` — API clients (AuthClient, UsersClient) to centralize request logic
-- `src/types/` — TypeScript types for ReqRes contracts
-- `src/utils/` — utilities (timing/measurement used for observability only)
-- `tests/` — spec files aligned with the assignment scenarios
+- `src/config/` €” environment loading + validation (BASE_URL, X_API_KEY)
+- `src/fixtures/` €” Playwright fixtures (APIRequestContext with baseURL + headers)
+- `src/clients/` €” API clients (AuthClient, UsersClient) to centralize request logic
+- `src/types/` €” TypeScript types for ReqRes contracts
+- `src/utils/` €” utilities (timing/measurement used for observability only)
+- `tests/` €” spec files aligned with the assignment scenarios
 
 ## Design Notes (Clean Code & Maintainability)
 
@@ -90,10 +90,10 @@ This is intentionally designed to be stable against public API limitations (rate
 This repository includes a CI workflow that runs `npm run verify` and uploads the Playwright HTML report as an artifact.
 
 Required secret:
-- `X_API_KEY` (Repository Settings → Secrets and variables → Actions → New repository secret)
+- `X_API_KEY` (Repository Settings †’ Secrets and variables †’ Actions †’ New repository secret)
 
 Where to download the report:
-- GitHub → Actions → select a workflow run → Artifacts → `playwright-report`
+- GitHub †’ Actions †’ select a workflow run †’ Artifacts †’ `playwright-report`
 
 ## Submission
 
@@ -133,7 +133,7 @@ Submission ZIP must include:
 - list -> pick user -> detail
 - consistency validation between list item and user detail
 
-## Bonus 2 — Token-based auth (design proposal)
+## Bonus 2 €” Token-based auth (design proposal)
 
 If the `/api/login` token were required for other endpoints:
 
