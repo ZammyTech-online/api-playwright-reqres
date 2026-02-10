@@ -58,14 +58,27 @@ test.describe("Users API", () => {
     const users = new UsersClient(api);
     const { body } = await users.listUsers({ page: 2 });
 
+    // Campos base
     expect(body.page).toBe(2);
     expect(body.per_page).toBeGreaterThan(0);
     expect(body.total).toBeGreaterThan(0);
     expect(body.total_pages).toBeGreaterThan(0);
-
-    // No asumir igualdad exacta: última página puede tener menos
     expect(body.data.length).toBeGreaterThan(0);
-    expect(body.data.length).toBeLessThanOrEqual(body.per_page);
+
+    // Trampa típica: totals "accurate"
+    expect(
+      body.total_pages,
+      "total_pages debe ser ceil(total/per_page)"
+    ).toBe(Math.ceil(body.total / body.per_page));
+
+    // "Correct number of users" sin suposiciones frágiles:
+    // - Si NO es última página -> data.length debe ser per_page
+    // - Si es última página -> data.length <= per_page
+    if (body.page < body.total_pages) {
+      expect(body.data.length, "Si no es última página, data.length debe ser per_page").toBe(body.per_page);
+    } else {
+      expect(body.data.length, "Si es última página, data.length <= per_page").toBeLessThanOrEqual(body.per_page);
+    }
 
     // coherencia mínima
     expect(body.total_pages).toBeGreaterThanOrEqual(body.page);

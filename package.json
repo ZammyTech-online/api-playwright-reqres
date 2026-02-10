@@ -9,7 +9,8 @@
     "report": "playwright show-report",
     "test:html": "playwright test --reporter=html",
     "healthcheck:reqres": "node -e \"require('dotenv').config(); const https=require('https'); const key=process.env.X_API_KEY; if(!key) throw new Error('X_API_KEY missing'); const req=https.request('https://reqres.in/api/users/2',{headers:{'x-api-key':key,'accept':'application/json'}},res=>{console.log('HTTP',res.statusCode); process.exit(res.statusCode===200?0:1)}); req.on('error',e=>{console.error(e); process.exit(1)}); req.end();\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:ci": "playwright test --workers=2"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
