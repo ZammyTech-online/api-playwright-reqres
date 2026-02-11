@@ -1,167 +1,190 @@
-## Known limitation: ReqRes `/api/login` is not a real auth system
+# API Testing (ReqRes) with Playwright + TypeScript
 
-ReqRes is a demo/teaching API (mock backend). During the implementation of this technical assignment, we observed that the `/api/login` endpoint (does not validate credential correctness)
+This repo contains a small API automation suite for the **ReqRes demo API** built with **Playwright Test + TypeScript**.
 
-## Observed behavior (project execution):
-- If the request contains **both** `email` and `password` fields, the API responds with **HTTP 200** and returns a `token`, even when the credentials are not “real”.
-- Therefore, “negative login” validations are effectively limited to **missing required fields** (e.g., missing `email`, missing `password`, or both), which return an error response.
+The goal is simple: keep the suite **easy to read**, **easy to maintain**, and **stable** (no flaky assertions), while using **environment-based config** (no hardcoded secrets).
 
-## Why this matters for the assignment:
-- The assignment requests testing *valid* and *invalid* credentials, but ReqRes does not provide a reliable server-side behavior to assert “invalid credentials” as a rejection (e.g., 401/403).
-- This suite covers the negative space that ReqRes actually enforces: required-field validation and response contract assertions.
-
-
-
-# Technical Assignment €” API Testing (ReqRes) with Playwright + TypeScript
-
-API automation suite for ReqRes using Playwright Test + TypeScript. Focused on clean code, maintainability, stable assertions (anti-flaky), and environment-based configuration (no hardcoded secrets).
+---
 
 ## Requirements
 
-- Node.js 18+ (20+ recommended)
-- npm
+* Node.js 18+ (Node 20+ recommended)
+* npm
 
-## Project Structure
+---
 
-- `src/config/` €” environment loading + validation (BASE_URL, X_API_KEY)
-- `src/fixtures/` €” Playwright fixtures (APIRequestContext with baseURL + headers)
-- `src/clients/` €” API clients (AuthClient, UsersClient) to centralize request logic
-- `src/types/` €” TypeScript types for ReqRes contracts and Evidence
-- `src/utils/` €” utilities (timing/measurement used for observability only)
-- `tests/` €” spec files aligned with the assignment scenarios
+## Quick start
 
-## Design Notes (Clean Code & Maintainability)
+### 1) Install dependencies
 
-- Configuration is environment-driven: `BASE_URL` and `X_API_KEY` are read from `.env` locally or CI secrets. No secrets are hardcoded or committed (`.env` is git-ignored; `.env.example` contains placeholders only).
-- A single API fixture (`src/fixtures/api.ts`) centralizes `baseURL` and common headers (including `x-api-key`) so tests stay consistent and avoid duplication.
-- Request logic is encapsulated in small API clients (`src/clients/*`) to keep specs readable and to isolate endpoint changes from tests.
-- Assertions focus on stable contracts and required fields; the `delay` scenario avoids strict time-based checks to prevent flakiness on a public API (CDN/cache variability).
-- A CI-safe mode (`npm run test:ci`) is provided to reduce parallelism and mitigate public API rate limits; `npm run verify` runs typecheck + CI-safe tests for reproducible validation.
-- Playwright HTML reporting is generated for submission (`playwright-report/`) as required by the assignment.
+```bash
+npm install
+npx playwright install
+```
 
-## Setup
+### 2) Configure environment (no hardcoded secrets)
 
-1) Install dependencies:
+ReqRes requires an `x-api-key` header for requests to work.
 
-- `npm install`
-- `npx playwright install`
+* Copy `.env.example` → `.env`
+* Update `.env` with your values:
 
-2) Environment variables (no hardcoded secrets)
-
-**Important (per assignment):** the `x-api-key` header is required for requests to work.  
-This project injects it automatically via the API fixture (`src/fixtures/api.ts`) using `X_API_KEY` from environment variables.
-
-- Copy `.env.example` to `.env`
-- Set in `.env`:
-  - `BASE_URL=https://reqres.in`
-  - `X_API_KEY=<YOUR_API_KEY>`
+  * `BASE_URL=https://reqres.in`
+  * `X_API_KEY=YOUR_API_KEY`
 
 Notes:
-- `.env` is ignored by git and must not be committed.
-- `.env.example` contains placeholders only (never real keys).
-- If you do not have an API key, generate one on ReqRes (as described in the assignment).
+
+* `.env` is gitignored and must **not** be committed.
+* `.env.example` only contains placeholders.
+
+---
 
 ## Running
 
-- Run full suite:
-  - `npm test`
+```bash
+# Run full suite
+npm test
 
-- Typecheck only:
-  - `npm run typecheck`
+# Typecheck only
+npm run typecheck
 
-- CI-safe run (lower parallelism to avoid public API limitations):
-  - `npm run test:ci`
+# CI-safe run (lower parallelism to reduce rate-limit issues on the public API)
+npm run test:ci
 
-- Verify (typecheck + CI-safe tests):
-  - `npm run verify`
+# Verify (typecheck + CI-safe tests)
+npm run verify
 
-- Clean artifacts:
-  - `npm run clean`
+# Generate Playwright HTML report
+npm run test:html
 
-## HTML Report (required)
+# Open report locally
+npm run report
+```
 
-- Generate report:
-  - `npm run test:html`
+---
 
-- Open report locally:
-  - `npm run report`
+## Project layout
 
-Report output folder:
-- `playwright-report/`
+* `src/config/` — loads + validates env (`BASE_URL`, `X_API_KEY`)
+* `src/fixtures/` — creates the `APIRequestContext` with baseURL + default headers
+* `src/clients/` — small API clients (`AuthClient`, `UsersClient`) to keep specs clean
+* `src/types/` — TypeScript types for ReqRes contracts
+* `src/utils/` — utilities (timing/observability only)
+* `tests/` — specs mapped to the assignment scenarios
 
-## Reproducibility (local)
+---
 
-The project was validated from a clean install using:
+## Why it’s structured this way
 
-- `npm ci`
-- `npm run verify` (typecheck + CI-safe tests with 2 workers)
-- `npm run test:html` (HTML report generation)
+* Config is **environment-driven** (`BASE_URL`, `X_API_KEY` from `.env` locally or CI secrets).
+* A single API fixture centralizes **baseURL + shared headers** (including `x-api-key`).
+* Endpoint calls live in clients so specs stay focused on **behavior + assertions**.
+* Assertions focus on **stable contracts**, not timing.
+* There’s a CI-safe mode to reduce flakiness caused by **public API rate limits**.
 
-This is intentionally designed to be stable against public API limitations (rate limits / variability).
+---
+
+## Coverage (mapped to the assignment)
+
+### 1) `POST /api/login`
+
+* Valid credentials → expect **200** + `token`
+* Missing fields → expect **400** + error message
+* “Invalid credentials” with email + password present → executed as required by the assignment
+  *(see Known limitations below — ReqRes behaves like a mock here)*
+
+### 2) `GET /api/users/2`
+
+* Expect **200**
+* Validate response shape: `data` + `support`
+* Validate key fields: `id`, `email`, `first_name`, `last_name`, `avatar`
+
+### 3) `POST /api/users` (create user)
+
+* Valid payload (`name` + `job`) → expect **201**, `id`, `createdAt`, and echo of sent fields
+* Negative variants included to explore behavior
+  *(see Known limitations — ReqRes is permissive and still returns 201)*
+
+### 4) Pagination `GET /api/users?page=2`
+
+* Validate pagination metadata: `page`, `per_page`, `total`, `total_pages`
+* Validate `per_page` matches `data.length`
+* Fetch page 1 + page 2 and ensure **no overlap** in user IDs
+
+### 5) Delay `GET /api/users?delay=<n>`
+
+* Ensure request includes `delay`
+* Expect **200** + stable schema
+* No strict time assertions (public API variability)
+
+### 6) Bonus 1: Chained requests
+
+* List users → pick one user → fetch detail by id
+* Validate basic consistency between list item and detail response
+
+---
+
+## Known limitations (ReqRes is a demo/mock API)
+
+### 1) `/api/login` is not real authentication
+
+Observed behavior:
+
+* If both `email` and `password` are present, ReqRes returns **200 + token** even if the password is “wrong”.
+
+Impact:
+
+* Realistic “wrong password” negative testing isn’t possible here.
+* The suite documents and asserts the behavior actually returned by the API.
+
+### 2) `/api/users` create is permissive
+
+Observed behavior:
+
+* It returns **201** even when `job` or `name` is missing (and even for `{}`).
+
+Impact:
+
+* For negative variants, tests validate the **contract** (`id`, `createdAt`) and ensure stability (no 5xx),
+  instead of expecting server-side validation that doesn’t exist in ReqRes.
+
+---
+
+## Bonus Question 2 (Theory): token-based auth in a real system
+
+ReqRes doesn’t require the token, but in a real Bearer/JWT setup I’d do this:
+
+* Login once via an `AuthClient` (credentials from `.env` locally and secrets in CI/CD).
+* Cache the token in memory (ideally per worker so parallel runs don’t fight each other).
+* Build the API request context already authenticated (`Authorization: Bearer <token>`), so specs stay clean.
+* Handle expiration: on **401/403**, refresh once and retry once (no infinite loops).
+* Never print tokens in logs (at most mask them).
+
+---
 
 ## CI (GitHub Actions)
 
-This repository includes a CI workflow that runs `npm run verify` and uploads the Playwright HTML report as an artifact.
+* CI runs: `npm run verify`
+* Playwright HTML report is uploaded as an artifact
 
 Required secret:
-- `X_API_KEY` (Repository Settings †’ Secrets and variables †’ Actions †’ New repository secret)
 
-Where to download the report:
-- GitHub †’ Actions †’ select a workflow run †’ Artifacts †’ `playwright-report`
+* `X_API_KEY` (GitHub repo → Settings → Secrets and variables → Actions)
+
+---
 
 ## Submission
 
-Submission ZIP must include:
-- source code + `playwright-report/`
-- exclude `node_modules/`
-- exclude `.env`
+The submission zip should include:
 
-## Coverage vs Assignment
+* Source code
+* `playwright-report/` (HTML report)
 
-1) POST `/api/login`
-- Success: valid credentials -> `200` + `token`
-- Failure: invalid credentials with both email+password present -> `4xx` + error
-- Missing fields: email missing, password missing, both missing -> `4xx` + error
-- Extra checks: status codes + basic response contract (token or error)
+It must exclude:
 
-2) GET `/api/users/2`
-- `200` + required structure (`data`, `support`)
-- Content checks (id/email/names/avatar)
+* `node_modules/`
+* `.env`
 
-3) POST `/api/users` (create user)
-- Valid case -> `201` + `id` + `createdAt` + echo `name/job`
-- Invalid inputs (provider-dependent behavior):
-  - never allow `5xx`
-  - branch validation: if `201` validate `id/createdAt`; if `4xx` validate `error/message`
+---
 
-4) Pagination GET `/api/users?page=2`
-- "Correct number of users" (per_page logic)
-- `page`, `per_page`, `total`, `total_pages` accuracy checks
-- Page 1 vs Page 2: no overlapping user ids
-
-5) Delay GET `/api/users?delay=<n>`
-- Anti-flaky validations: request contains `delay`, status `200`, stable schema checks
-- No strict time assertions (public APIs may vary due to cache/CDN/routing)
-
-6) Bonus 1 (chained requests)
-- list -> pick user -> detail
-- consistency validation between list item and user detail
-
-## Bonus 2 €” Token-based auth (design proposal)
-
-If the `/api/login` token were required for other endpoints:
-
-- Store & reuse tokens securely
-  - credentials in `.env` locally or CI secrets (never hardcoded)
-  - obtain token once per worker/suite and cache in memory
-  - never persist tokens in the repo
-
-- Add auth headers automatically
-  - create an `authApi` fixture that logs in during setup and injects:
-    `Authorization: Bearer <token>`
-  - alternative: a BaseClient that attaches common headers to all requests
-
-- Handle token expiration
-  - on `401/403`, refresh token and retry once (avoid loops)
-  - if refresh tokens exist: TokenProvider with TTL and proactive refresh
-  - do not reuse tokens across CI pipeline runs
+Si quieres, te lo dejo también en **español**, pero para pruebas técnicas suele sumar que el README quede en inglés (más estándar para reviewers).
