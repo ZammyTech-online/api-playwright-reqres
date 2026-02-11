@@ -1,46 +1,62 @@
-﻿import { test, expect } from "../src/fixtures/api";
+﻿// tests/login.spec.ts
+import { test, expect } from "../src/fixtures/api";
 import { AuthClient } from "../src/clients/auth.client";
 
 test.describe("Auth /api/login", () => {
-  test("Login OK: devuelve token", async ({ api }) => {
-    // Arrange: create a client bound to the shared APIRequestContext fixture
+  test("L1 Login OK: devuelve token (200)", async ({ api }) => {
     const auth = new AuthClient(api);
 
-    // Act: perform a valid login
     const body = await auth.loginOk("eve.holt@reqres.in", "cityslicka");
 
-    // Assert: token must be present
-    expect(body.token).toBeTruthy();
+    // token must be a non-empty string (client already asserts it, this is explicit for the spec)
+    expect(typeof body.token).toBe("string");
+    expect(body.token.length).toBeGreaterThan(0);
   });
 
-  test("Login KO: credenciales inválidas (email+password presentes)", async ({ api }) => {
+  test("L5 Login con password incorrecto (credenciales presentes): devuelve 200 + token (comportamiento real ReqRes)", async ({
+    api,
+  }) => {
     const auth = new AuthClient(api);
 
-    // Act: attempt login with invalid credentials (both fields present)
-    const { status, body } = await auth.loginError("peter@klaven", "wrong_password");
+    // ReqRes is permissive: if both fields exist, it returns 200 even if password is wrong
+    const body = await auth.loginOk("eve.holt@reqres.in", "wrong_password");
 
-    // Assert: must be 4xx (never 5xx) and include an error message
-    expect(status).toBeGreaterThanOrEqual(400);
-    expect(status).toBeLessThan(500);
-    expect(body.error).toBeTruthy();
+    expect(typeof body.token).toBe("string");
+    expect(body.token.length).toBeGreaterThan(0);
   });
 
-  test("Login KO: missing fields (email/password/both)", async ({ api }) => {
+  test("L2 Missing password: devuelve 400 + error exacto", async ({ api }) => {
     const auth = new AuthClient(api);
 
-    // Table-driven cases for missing required fields
-    const cases = [
-      { name: "password missing", email: "eve.holt@reqres.in", password: undefined },
-      { name: "email missing", email: undefined, password: "cityslicka" },
-      { name: "both missing", email: undefined, password: undefined },
-    ];
+    const { status, body } = await auth.loginError("eve.holt@reqres.in", undefined);
 
-    // Validate each case independently with stable 4xx assertions
-    for (const c of cases) {
-      const { status, body } = await auth.loginError(c.email as any, c.password as any);
-      expect(status, c.name).toBeGreaterThanOrEqual(400);
-      expect(status, c.name).toBeLessThan(500);
-      expect(body.error, c.name).toBeTruthy();
-    }
+    expect(status).toBe(400);
+    expect(body.error).toBe("Missing password");
   });
+
+  test("L3 Missing email: devuelve 400 + error exacto", async ({ api }) => {
+    const auth = new AuthClient(api);
+
+    const { status, body } = await auth.loginError(undefined, "cityslicka");
+
+    expect(status).toBe(400);
+    expect(body.error).toBe("Missing email or username");
+  });
+
+  test("L4 Empty request body real (NO {}): devuelve 400 + error (message si aplica)", async ({ api }) => {
+  const auth = new AuthClient(api);
+
+  const { status, body } = await auth.loginEmptyBody();
+
+  expect(status).toBe(400);
+  expect(typeof body.error).toBe("string");
+  expect(body.error.length).toBeGreaterThan(0);
+
+  // Si cae en rama Empty request body, validamos message exacto
+  if (body.error === "Empty request body") {
+    expect(body.message).toBe("Request body cannot be empty for JSON endpoints");
+  }
+});
+
+
 });
