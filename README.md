@@ -1,3 +1,17 @@
+## Known limitation: ReqRes `/api/login` is not a real auth system
+
+ReqRes is a demo/teaching API (mock backend). During the implementation of this technical assignment, we observed that the `/api/login` endpoint (does not validate credential correctness)
+
+## Observed behavior (project execution):
+- If the request contains **both** `email` and `password` fields, the API responds with **HTTP 200** and returns a `token`, even when the credentials are not “real”.
+- Therefore, “negative login” validations are effectively limited to **missing required fields** (e.g., missing `email`, missing `password`, or both), which return an error response.
+
+## Why this matters for the assignment:
+- The assignment requests testing *valid* and *invalid* credentials, but ReqRes does not provide a reliable server-side behavior to assert “invalid credentials” as a rejection (e.g., 401/403).
+- This suite covers the negative space that ReqRes actually enforces: required-field validation and response contract assertions.
+
+
+
 # Technical Assignment €” API Testing (ReqRes) with Playwright + TypeScript
 
 API automation suite for ReqRes using Playwright Test + TypeScript. Focused on clean code, maintainability, stable assertions (anti-flaky), and environment-based configuration (no hardcoded secrets).
@@ -12,7 +26,7 @@ API automation suite for ReqRes using Playwright Test + TypeScript. Focused on c
 - `src/config/` €” environment loading + validation (BASE_URL, X_API_KEY)
 - `src/fixtures/` €” Playwright fixtures (APIRequestContext with baseURL + headers)
 - `src/clients/` €” API clients (AuthClient, UsersClient) to centralize request logic
-- `src/types/` €” TypeScript types for ReqRes contracts
+- `src/types/` €” TypeScript types for ReqRes contracts and Evidence
 - `src/utils/` €” utilities (timing/measurement used for observability only)
 - `tests/` €” spec files aligned with the assignment scenarios
 

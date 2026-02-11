@@ -23,7 +23,7 @@ export class AuthClient {
    * - Expects 200
    * - Expects token in response body
    */
-   async loginOk(email: string, password: string): Promise<LoginResponse> {
+  async loginOk(email: string, password: string): Promise<LoginResponse> {
     const res = await this.loginRaw(email, password);
 
     expect(res.status(), "login OK must return 200").toBe(200);
@@ -37,11 +37,9 @@ export class AuthClient {
   }
 
   /**
-   * Negative path (provider-dependent):
-   * - Expects any 4xx (avoid brittle exact code assumptions on public APIs)
+   * Negative path (missing fields):
+   * - Expects 4xx
    * - Expects { error } in body
-   *
-   * Returns status/body/raw for additional validations from the spec if needed.
    */
   async loginError(
     email?: string,
@@ -50,57 +48,44 @@ export class AuthClient {
     const res = await this.loginRaw(email, password);
     const status = res.status();
 
-    // Guardrail: should not be success (2xx) nor server-side (5xx).
-    expect(status, "login KO must be 4xx (not 2xx/3xx/5xx)").toBeGreaterThanOrEqual(400);
-    expect(status, "login KO must be 4xx (not 5xx)").toBeLessThan(500);
+    expect(status, "login KO must be 4xx").toBeGreaterThanOrEqual(400);
+    expect(status, "login KO must be < 500").toBeLessThan(500);
 
     const body = (await res.json()) as ErrorResponse;
-
-    // Contract assertion: error message must exist.
-    expect(body.error, "login KO must return error field").toBeTruthy();
+    expect(typeof body.error, "login KO must return error string").toBe("string");
+    expect(body.error.length, "login KO error must be non-empty").toBeGreaterThan(0);
 
     return { status, body, raw: res };
   }
-    /**
-   * Empty request body (truly empty, not {}).
-   * Observed behavior: 400 with { error, message, ... }.
-   */
+
   /**
- * Empty request body (truly empty, not {}).
- * Observed behavior: 400 with { error, message }.
- */
- /**
- * Empty request body (truly empty, not {}).
- *
- * Observed variability:
- * - Postman: 400 + { error: "Empty request body", message: "Request body cannot be empty for JSON endpoints" }
- * - Playwright APIRequestContext: 400 + { error: "Missing email or username" }
- *
- * Enterprise rule: assert status=400 and an error string; if the "Empty request body" branch appears,
- * then assert the message too (exact).
- */
-async loginEmptyBody(): Promise<{ status: number; body: any; raw: APIResponse }> {
-  // No "data" field at all -> attempt a truly empty body
-  const res = await this.api.post("/api/login");
+   * Empty request body (truly empty, not {}).
+   *
+   * Confirmed behavior differs by client:
+   * - Postman (empty body): 400 + { error: "Empty request body", message: "Request body cannot be empty for JSON endpoints" }
+   * - Playwright APIRequestContext (no data): 400 + { error: "Missing email or username" } (observed)
+   *
+   * Enterprise approach:
+   * - Assert 400 + error string (stable)
+   * - If the "Empty request body" branch appears, assert message exact (strict, but conditional)
+   */
+  async loginEmptyBody(): Promise<{ status: number; body: ErrorResponse & { message?: string }; raw: APIResponse }> {
+    // IMPORTANT: do not send "data" or "{}" to attempt a truly empty body
+    const res = await this.api.post("/api/login");
 
-  const status = res.status();
-  expect(status, "empty body must be 400").toBe(400);
+    const status = res.status();
+    expect(status, "empty body must be 400").toBe(400);
 
-  const body = await res.json();
+    const body = (await res.json()) as ErrorResponse & { message?: string };
 
-  // Always require an error field (string, non-empty)
-  expect(typeof body.error, "empty body must return error string").toBe("string");
-  expect(String(body.error).length, "empty body error must be non-empty").toBeGreaterThan(0);
+    expect(typeof body.error, "empty body must return error string").toBe("string");
+    expect(body.error.length, "empty body error must be non-empty").toBeGreaterThan(0);
 
-  // If ReqRes returns the 'Empty request body' branch, validate message strictly
-  if (body.error === "Empty request body") {
-    expect(body.message).toBe("Request body cannot be empty for JSON endpoints");
+    // Strict only when that branch appears
+    if (body.error === "Empty request body") {
+      expect(body.message).toBe("Request body cannot be empty for JSON endpoints");
+    }
+
+    return { status, body, raw: res };
   }
-
-  // If it returns the other branch, accept it (still consistent with 400 + error)
-  // e.g. "Missing email or username"
-  return { status, body, raw: res };
-}
-
-
 }
