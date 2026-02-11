@@ -186,5 +186,3 @@ It must exclude:
 * `.env`
 
 ---
-
-Si quieres, te lo dejo también en **español**, pero para pruebas técnicas suele sumar que el README quede en inglés (más estándar para reviewers).
